@@ -182,14 +182,23 @@ io.on('connection', (socket) => {
         if (player) {
             player.vote = vote;
 
-            // Notify all players (but don't reveal votes yet)
-            io.to(sessionCode).emit('voteSubmitted', {
-                players: session.players.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    hasVoted: p.vote !== null
-                }))
-            });
+            // If cards are revealed, broadcast full update with new average
+            if (session.revealed) {
+                const average = calculateAverage(session.players.filter(p => p.vote !== null));
+                io.to(sessionCode).emit('cardsRevealed', {
+                    players: session.players,
+                    average
+                });
+            } else {
+                // Notify all players (but don't reveal votes yet)
+                io.to(sessionCode).emit('voteSubmitted', {
+                    players: session.players.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        hasVoted: p.vote !== null
+                    }))
+                });
+            }
 
             console.log(`${player.name} voted in session ${sessionCode}`);
         }

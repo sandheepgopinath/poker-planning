@@ -245,7 +245,7 @@ socket.on('cardsRevealed', (data) => {
     state.players = data.players;
     state.revealed = true;
 
-    hideVotingSection();
+    // Keep voting section visible so users can change votes
     renderPlayers();
     showResults(data.average);
 
@@ -293,9 +293,30 @@ function switchToPlanning() {
 function renderPlayers() {
     playersGrid.innerHTML = '';
 
-    state.players.forEach(player => {
+    const playerCount = state.players.length;
+
+    state.players.forEach((player, index) => {
         const playerCard = document.createElement('div');
         playerCard.className = 'player-card';
+
+        // Calculate circular position
+        // Start from top (270 degrees) and distribute evenly
+        const angleStep = 360 / playerCount;
+        const angle = (270 + (index * angleStep)) * (Math.PI / 180); // Convert to radians
+
+        // Table dimensions (relative to poker-table container)
+        const radiusX = 42; // Horizontal radius percentage
+        const radiusY = 38; // Vertical radius percentage
+
+        // Calculate position (center is 50%, 50%)
+        const x = 50 + radiusX * Math.cos(angle);
+        const y = 50 + radiusY * Math.sin(angle);
+
+        // Position the card
+        playerCard.style.left = `${x}%`;
+        playerCard.style.top = `${y}%`;
+        playerCard.style.transform = 'translate(-50%, -50%)';
+        playerCard.style.zIndex = index + 1;
 
         // Check if this player is admin
         const isPlayerAdmin = state.players[0]?.id === player.id;
