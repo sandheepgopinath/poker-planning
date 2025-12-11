@@ -22,9 +22,11 @@ const sessionCodeInput = document.getElementById('session-code-input');
 const playerNameInput = document.getElementById('player-name-input');
 const joinSessionBtn = document.getElementById('join-session-btn');
 
+
 // DOM Elements - Planning Page
 const sessionCodeDisplay = document.getElementById('session-code-display');
 const adminControls = document.getElementById('admin-controls');
+const copyLinkBtn = document.getElementById('copy-link-btn');
 const startEstimationBtn = document.getElementById('start-estimation-btn');
 const revealCardsBtn = document.getElementById('reveal-cards-btn');
 const estimateAgainBtn = document.getElementById('estimate-again-btn');
@@ -34,6 +36,7 @@ const votingSection = document.getElementById('voting-section');
 const cardsContainer = document.getElementById('cards-container');
 const resultsSection = document.getElementById('results-section');
 const averageDisplay = document.getElementById('average-display');
+
 
 // DOM Elements - Modal
 const configModal = document.getElementById('config-modal');
@@ -101,6 +104,7 @@ startEstimationBtn.addEventListener('click', () => {
     socket.emit('startEstimation', state.sessionCode);
 });
 
+
 revealCardsBtn.addEventListener('click', () => {
     socket.emit('revealCards', state.sessionCode);
 });
@@ -109,9 +113,34 @@ estimateAgainBtn.addEventListener('click', () => {
     socket.emit('estimateAgain', state.sessionCode);
 });
 
+copyLinkBtn.addEventListener('click', () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?session=${state.sessionCode}`;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        // Show success feedback
+        const originalText = copyLinkBtn.innerHTML;
+        copyLinkBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Copied!
+        `;
+        copyLinkBtn.style.background = 'var(--accent-gradient)';
+
+        setTimeout(() => {
+            copyLinkBtn.innerHTML = originalText;
+            copyLinkBtn.style.background = '';
+        }, 2000);
+    }).catch(() => {
+        showError('Failed to copy link');
+    });
+});
+
 configCardsBtn.addEventListener('click', () => {
     openConfigModal();
 });
+
 
 // Event Listeners - Modal
 closeModalBtn.addEventListener('click', () => {
@@ -462,3 +491,24 @@ function showError(message) {
         errorToast.classList.remove('show');
     }, 3000);
 }
+
+// Check URL parameters on page load
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionParam = urlParams.get('session');
+
+    if (sessionParam) {
+        // Auto-populate the session code input
+        sessionCodeInput.value = sessionParam.toUpperCase();
+
+        // Focus on the player name input for convenience
+        playerNameInput.focus();
+
+        // Scroll to the join session card
+        document.getElementById('join-session-card').scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+});
+
