@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Fun and interactive Poker Planning tool for agile teams to estimate Jira stories collaboratively">
+  <title>Poker Planning - Agile Estimation Tool</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Landing Page -->
+  <div id="landing-page" class="page active">
+    <div class="container">
+      <div class="hero">
+        <div class="logo">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="12" width="48" height="40" rx="4" fill="url(#gradient1)" />
+            <text x="32" y="40" font-size="28" font-weight="bold" fill="white" text-anchor="middle">P</text>
+            <defs>
+              <linearGradient id="gradient1" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#6366f1"/>
+                <stop offset="1" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1>Poker Planning</h1>
+        <p class="subtitle">Collaborative story point estimation for agile teams</p>
+      </div>
+
+      <div class="action-cards">
+        <div class="action-card" id="new-session-card">
+          <div class="card-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+          </div>
+          <h2>Start New Session</h2>
+          <p>Create a new planning session and invite your team</p>
+          <input type="text" id="admin-name-input" placeholder="Enter your name" maxlength="20">
+          <button id="create-session-btn" class="btn btn-primary">Create Session</button>
+        </div>
+
+        <div class="action-card" id="join-session-card">
+          <div class="card-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+          </div>
+          <h2>Join Session</h2>
+          <p>Enter the session code to join an existing game</p>
+          <input type="text" id="session-code-input" placeholder="Enter 5-digit code" maxlength="5">
+          <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="20">
+          <button id="join-session-btn" class="btn btn-secondary">Join Session</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planning Page -->
+  <div id="planning-page" class="page">
+    <div class="planning-container">
+      <!-- Header -->
+      <header class="planning-header">
+        <div class="session-info">
+          <h1>Poker Planning</h1>
+          <div class="session-code-display">
+            Session Code: <span id="session-code-display"></span>
+          </div>
+        </div>
+        <div class="admin-controls" id="admin-controls" style="display: none;">
+          <button id="config-cards-btn" class="btn btn-icon" title="Configure Cards">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
+            </svg>
+          </button>
+          <button id="start-estimation-btn" class="btn btn-primary">Estimate a Ticket</button>
+          <button id="reveal-cards-btn" class="btn btn-accent" style="display: none;">Reveal Cards</button>
+          <button id="estimate-again-btn" class="btn btn-secondary" style="display: none;">Estimate Again</button>
+        </div>
+      </header>
+
+      <!-- Players Grid -->
+      <div class="players-section">
+        <h2>Players</h2>
+        <div id="players-grid" class="players-grid"></div>
+      </div>
+
+      <!-- Voting Section -->
+      <div id="voting-section" class="voting-section" style="display: none;">
+        <h2>Choose Your Estimate</h2>
+        <div id="cards-container" class="cards-container"></div>
+      </div>
+
+      <!-- Results Section -->
+      <div id="results-section" class="results-section" style="display: none;">
+        <h2>Results</h2>
+        <div id="average-display" class="average-display"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Configuration Modal -->
+  <div id="config-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Configure Card Values</h2>
+        <button id="close-modal-btn" class="btn-close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Customize the voting cards. You can use numbers or text (e.g., "S", "M", "L", "XL").</p>
+        
+        <div class="preset-buttons">
+          <button id="preset-fibonacci-btn" class="btn btn-small">Fibonacci</button>
+          <button id="preset-tshirt-btn" class="btn btn-small">T-Shirt Sizes</button>
+          <button id="preset-powers-btn" class="btn btn-small">Powers of 2</button>
+        </div>
+
+        <div id="card-values-list" class="card-values-list"></div>
+        
+        <div class="add-card-section">
+          <input type="text" id="new-card-value-input" placeholder="Enter card value" maxlength="10">
+          <button id="add-card-btn" class="btn btn-primary">Add Card</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-cards-btn" class="btn btn-primary">Save Configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Toast -->
+  <div id="error-toast" class="toast"></div>
+
+  <!-- Socket.io Client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
