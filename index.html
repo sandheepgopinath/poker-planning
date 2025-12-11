@@ -46,6 +46,7 @@
           </div>
           <h2>Start New Session</h2>
           <p>Create a new planning session and invite your team</p>
+          <input type="text" id="session-name-input" placeholder="Session name (optional)" maxlength="50">
           <input type="text" id="admin-name-input" placeholder="Enter your name" maxlength="20">
           <button id="create-session-btn" class="btn btn-primary">Create Session</button>
         </div>
@@ -74,12 +75,19 @@
       <!-- Header -->
       <header class="planning-header">
         <div class="session-info">
-          <h1>Poker Planning</h1>
+          <h1 id="session-name-display">Poker Planning</h1>
           <div class="session-code-display">
             Session Code: <span id="session-code-display"></span>
           </div>
         </div>
         <div class="admin-controls" id="admin-controls" style="display: none;">
+          <button id="view-history-btn" class="btn btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            View History
+          </button>
           <button id="copy-link-btn" class="btn btn-secondary">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -93,6 +101,18 @@
           <button id="estimate-again-btn" class="btn btn-secondary" style="display: none;">Estimate Again</button>
         </div>
       </header>
+
+      <!-- Story Name Input Section -->
+      <div id="story-input-section" class="story-input-section" style="display: none;">
+        <div class="story-input-card">
+          <h3>What are you estimating?</h3>
+          <input type="text" id="story-name-input" placeholder="Enter story name or description" maxlength="100">
+          <div class="story-input-actions">
+            <button id="cancel-story-btn" class="btn btn-secondary">Cancel</button>
+            <button id="confirm-story-btn" class="btn btn-primary">Start Estimation</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Players Grid -->
       <div class="players-section">
@@ -111,6 +131,27 @@
       <div id="results-section" class="results-section" style="display: none;">
         <h2>Results</h2>
         <div id="average-display" class="average-display"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Estimation History</h2>
+        <button id="close-history-modal-btn" class="btn-close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="history-list" class="history-list"></div>
+        <div id="no-history-message" class="no-history-message" style="display: none;">
+          <p>No estimation history yet. Complete an estimation to see it here!</p>
+        </div>
       </div>
     </div>
   </div>

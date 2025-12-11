@@ -41,10 +41,11 @@ io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
     // Create new session
-    socket.on('createSession', (playerName) => {
+    socket.on('createSession', ({ playerName, sessionName }) => {
         const sessionCode = generateSessionCode();
         const session = {
             code: sessionCode,
+            name: sessionName || 'Planning Session',
             admin: socket.id,
             players: [{
                 id: socket.id,
@@ -53,7 +54,9 @@ io.on('connection', (socket) => {
             }],
             cardValues: ['1', '2', '3', '5', '8', '13', '21', '34', '55'], // Default Fibonacci
             estimating: false,
-            revealed: false
+            revealed: false,
+            history: [],
+            currentStory: null
         };
 
         sessions.set(sessionCode, session);
@@ -62,9 +65,11 @@ io.on('connection', (socket) => {
 
         socket.emit('sessionCreated', {
             sessionCode,
+            sessionName: session.name,
             isAdmin: true,
             players: session.players,
-            cardValues: session.cardValues
+            cardValues: session.cardValues,
+            history: session.history
         });
 
         console.log(`Session created: ${sessionCode} by ${playerName}`);
@@ -98,11 +103,14 @@ io.on('connection', (socket) => {
 
         socket.emit('sessionJoined', {
             sessionCode,
+            sessionName: session.name,
             isAdmin: socket.id === session.admin,
             players: session.players,
             cardValues: session.cardValues,
             estimating: session.estimating,
-            revealed: session.revealed
+            revealed: session.revealed,
+            history: session.history,
+            currentStory: session.currentStory
         });
 
         // Notify all players in session
@@ -138,7 +146,7 @@ io.on('connection', (socket) => {
     });
 
     // Start estimation round (admin only)
-    socket.on('startEstimation', (sessionCode) => {
+    socket.on('startEstimation', ({ sessionCode, storyName }) => {
         const session = sessions.get(sessionCode);
 
         if (!session) {
@@ -155,13 +163,15 @@ io.on('connection', (socket) => {
         session.players.forEach(p => p.vote = null);
         session.estimating = true;
         session.revealed = false;
+        session.currentStory = storyName || 'Untitled Story';
 
         // Notify all players
         io.to(sessionCode).emit('estimationStarted', {
-            players: session.players
+            players: session.players,
+            currentStory: session.currentStory
         });
 
-        console.log(`Estimation started in session ${sessionCode}`);
+        console.log(`Estimation started in session ${sessionCode}: ${session.currentStory}`);
     });
 
     // Submit vote
@@ -244,10 +254,32 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // Save current estimation to history if there were votes
+        const votedPlayers = session.players.filter(p => p.vote !== null);
+        if (votedPlayers.length > 0 && session.currentStory) {
+            const average = calculateAverage(votedPlayers);
+            const historyEntry = {
+                storyName: session.currentStory,
+                timestamp: new Date().toISOString(),
+                votes: votedPlayers.map(p => ({
+                    playerName: p.name,
+                    vote: p.vote
+                })),
+                average: average
+            };
+            session.history.push(historyEntry);
+
+            // Notify all players of history update
+            io.to(sessionCode).emit('historyUpdated', {
+                history: session.history
+            });
+        }
+
         // Reset votes
         session.players.forEach(p => p.vote = null);
         session.estimating = false;
         session.revealed = false;
+        session.currentStory = null;
 
         // Notify all players
         io.to(sessionCode).emit('estimationReset', {

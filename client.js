@@ -4,18 +4,22 @@ const socket = io();
 // State management
 let state = {
     sessionCode: null,
+    sessionName: null,
     playerName: null,
     isAdmin: false,
     players: [],
     cardValues: ['1', '2', '3', '5', '8', '13', '21', '34', '55'],
     currentVote: null,
     estimating: false,
-    revealed: false
+    revealed: false,
+    history: [],
+    currentStory: null
 };
 
 // DOM Elements - Landing Page
 const landingPage = document.getElementById('landing-page');
 const planningPage = document.getElementById('planning-page');
+const sessionNameInput = document.getElementById('session-name-input');
 const adminNameInput = document.getElementById('admin-name-input');
 const createSessionBtn = document.getElementById('create-session-btn');
 const sessionCodeInput = document.getElementById('session-code-input');
@@ -25,7 +29,9 @@ const joinSessionBtn = document.getElementById('join-session-btn');
 
 // DOM Elements - Planning Page
 const sessionCodeDisplay = document.getElementById('session-code-display');
+const sessionNameDisplay = document.getElementById('session-name-display');
 const adminControls = document.getElementById('admin-controls');
+const viewHistoryBtn = document.getElementById('view-history-btn');
 const copyLinkBtn = document.getElementById('copy-link-btn');
 const startEstimationBtn = document.getElementById('start-estimation-btn');
 const revealCardsBtn = document.getElementById('reveal-cards-btn');
@@ -36,6 +42,18 @@ const votingSection = document.getElementById('voting-section');
 const cardsContainer = document.getElementById('cards-container');
 const resultsSection = document.getElementById('results-section');
 const averageDisplay = document.getElementById('average-display');
+
+// DOM Elements - Story Input
+const storyInputSection = document.getElementById('story-input-section');
+const storyNameInput = document.getElementById('story-name-input');
+const confirmStoryBtn = document.getElementById('confirm-story-btn');
+const cancelStoryBtn = document.getElementById('cancel-story-btn');
+
+// DOM Elements - History Modal
+const historyModal = document.getElementById('history-modal');
+const historyList = document.getElementById('history-list');
+const closeHistoryModalBtn = document.getElementById('close-history-modal-btn');
+const noHistoryMessage = document.getElementById('no-history-message');
 
 
 // DOM Elements - Modal
@@ -55,11 +73,12 @@ const errorToast = document.getElementById('error-toast');
 // Event Listeners - Landing Page
 createSessionBtn.addEventListener('click', () => {
     const name = adminNameInput.value.trim();
+    const sessionName = sessionNameInput.value.trim();
     if (!name) {
         showError('Please enter your name');
         return;
     }
-    socket.emit('createSession', name);
+    socket.emit('createSession', { playerName: name, sessionName: sessionName || 'Planning Session' });
     state.playerName = name;
 });
 
@@ -101,8 +120,30 @@ sessionCodeInput.addEventListener('input', (e) => {
 
 // Event Listeners - Planning Page
 startEstimationBtn.addEventListener('click', () => {
-    socket.emit('startEstimation', state.sessionCode);
+    // Show story input section
+    storyInputSection.style.display = 'flex';
+    storyNameInput.value = '';
+    storyNameInput.focus();
 });
+
+// Story input event listeners
+confirmStoryBtn.addEventListener('click', () => {
+    const storyName = storyNameInput.value.trim();
+    socket.emit('startEstimation', {
+        sessionCode: state.sessionCode,
+        storyName: storyName || 'Untitled Story'
+    });
+    storyInputSection.style.display = 'none';
+});
+
+cancelStoryBtn.addEventListener('click', () => {
+    storyInputSection.style.display = 'none';
+});
+
+storyNameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') confirmStoryBtn.click();
+});
+
 
 
 revealCardsBtn.addEventListener('click', () => {
@@ -140,6 +181,23 @@ copyLinkBtn.addEventListener('click', () => {
 configCardsBtn.addEventListener('click', () => {
     openConfigModal();
 });
+
+// View history button
+viewHistoryBtn.addEventListener('click', () => {
+    openHistoryModal();
+});
+
+// Close history modal
+closeHistoryModalBtn.addEventListener('click', () => {
+    closeHistoryModal();
+});
+
+historyModal.addEventListener('click', (e) => {
+    if (e.target === historyModal) {
+        closeHistoryModal();
+    }
+});
+
 
 
 // Event Listeners - Modal
@@ -197,25 +255,34 @@ presetPowersBtn.addEventListener('click', () => {
 // Socket Event Handlers
 socket.on('sessionCreated', (data) => {
     state.sessionCode = data.sessionCode;
+    state.sessionName = data.sessionName;
     state.isAdmin = data.isAdmin;
     state.players = data.players;
     state.cardValues = data.cardValues;
+    state.history = data.history || [];
 
     switchToPlanning();
 });
 
 socket.on('sessionJoined', (data) => {
     state.sessionCode = data.sessionCode;
+    state.sessionName = data.sessionName;
     state.isAdmin = data.isAdmin;
     state.players = data.players;
     state.cardValues = data.cardValues;
     state.estimating = data.estimating;
     state.revealed = data.revealed;
+    state.history = data.history || [];
+    state.currentStory = data.currentStory;
 
     switchToPlanning();
 
     if (state.estimating && !state.revealed) {
         showVotingSection();
+    }
+
+    if (state.history.length > 0) {
+        renderHistory();
     }
 });
 
@@ -247,6 +314,7 @@ socket.on('estimationStarted', (data) => {
     state.estimating = true;
     state.revealed = false;
     state.currentVote = null;
+    state.currentStory = data.currentStory;
 
     showVotingSection();
     renderPlayers();
@@ -289,6 +357,7 @@ socket.on('estimationReset', (data) => {
     state.estimating = false;
     state.revealed = false;
     state.currentVote = null;
+    state.currentStory = null;
 
     hideVotingSection();
     hideResults();
@@ -305,12 +374,20 @@ socket.on('error', (message) => {
     showError(message);
 });
 
+// History updated
+socket.on('historyUpdated', (data) => {
+    state.history = data.history;
+    renderHistory();
+});
+
 // UI Functions
 function switchToPlanning() {
     landingPage.classList.remove('active');
     planningPage.classList.add('active');
 
     sessionCodeDisplay.textContent = state.sessionCode;
+    // Display session name as the main header
+    sessionNameDisplay.textContent = state.sessionName || 'Planning Session';
 
     if (state.isAdmin) {
         adminControls.style.display = 'flex';
@@ -511,4 +588,53 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function renderHistory() {
+    historyList.innerHTML = '';
+
+    if (state.history.length === 0) {
+        noHistoryMessage.style.display = 'block';
+        return;
+    }
+
+    noHistoryMessage.style.display = 'none';
+
+    // Render history entries in reverse order (newest first)
+    [...state.history].reverse().forEach((entry, index) => {
+        const historyEntry = document.createElement('div');
+        historyEntry.className = 'history-entry';
+
+        const timestamp = new Date(entry.timestamp).toLocaleString();
+
+        historyEntry.innerHTML = `
+            <div class="history-entry-header">
+                <h3>${entry.storyName}</h3>
+                <span class="history-timestamp">${timestamp}</span>
+            </div>
+            <div class="history-votes">
+                ${entry.votes.map(v => `
+                    <div class="history-vote-item">
+                        <span class="vote-player">${v.playerName}</span>
+                        <span class="vote-value">${v.vote}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="history-average">
+                ${entry.average !== null ? `Average: <strong>${entry.average}</strong>` : 'No numeric votes'}
+            </div>
+        `;
+
+        historyList.appendChild(historyEntry);
+    });
+}
+
+function openHistoryModal() {
+    renderHistory();
+    historyModal.classList.add('active');
+}
+
+function closeHistoryModal() {
+    historyModal.classList.remove('active');
+}
+
 
